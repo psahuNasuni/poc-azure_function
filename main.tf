@@ -21,13 +21,13 @@ data "archive_file" "test" {
 
 
 resource "azurerm_resource_group" "resource_group" {
-  name     = "rg${var.project}"
+  name     = "${var.project}rg"
   location = "East US"
 }
 
 
 resource "azurerm_storage_account" "storage_account" {
-  name                     = "st${var.project}"
+  name                     = "${var.project}st"
   resource_group_name      = azurerm_resource_group.resource_group.name
   location                 = azurerm_resource_group.resource_group.location
   account_tier             = "Standard"
@@ -85,6 +85,14 @@ data "azurerm_storage_account_blob_container_sas" "storage_account_blob_containe
 }
 
 
+resource "azurerm_application_insights" "app_insights" {
+  name                = "${var.project}app-insights"
+  resource_group_name = azurerm_resource_group.resource_group.name
+  location            = azurerm_resource_group.resource_group.location
+  application_type    = "web"
+}
+
+
 resource "azurerm_app_service_plan" "app_service_plan" {
   name                = "${var.project}-app-service-plan"
   resource_group_name = azurerm_resource_group.resource_group.name
@@ -104,10 +112,11 @@ resource "azurerm_function_app" "function_app" {
   location            = azurerm_resource_group.resource_group.location
   app_service_plan_id = azurerm_app_service_plan.app_service_plan.id
   app_settings = {
-    "WEBSITE_RUN_FROM_PACKAGE"    = "https://${azurerm_storage_account.storage_account.name}.blob.core.windows.net/${azurerm_storage_container.storage_container.name}/${azurerm_storage_blob.storage_blob.name}${data.azurerm_storage_account_blob_container_sas.storage_account_blob_container_sas.sas}",
-    "FUNCTIONS_WORKER_RUNTIME"    = "python",
-    "AzureWebJobsDisableHomepage" = "false",
-    "https_only"                  = "false"
+    "WEBSITE_RUN_FROM_PACKAGE"       = "https://${azurerm_storage_account.storage_account.name}.blob.core.windows.net/${azurerm_storage_container.storage_container.name}/${azurerm_storage_blob.storage_blob.name}${data.azurerm_storage_account_blob_container_sas.storage_account_blob_container_sas.sas}",
+    "FUNCTIONS_WORKER_RUNTIME"       = "python",
+    "AzureWebJobsDisableHomepage"    = "false",
+    "https_only"                     = "false",
+    "APPINSIGHTS_INSTRUMENTATIONKEY" = "${azurerm_application_insights.app_insights.instrumentation_key}"
   }
   os_type = "linux"
   site_config {
